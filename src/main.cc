@@ -11,7 +11,7 @@ int main (int argc, char* argv[]) {
 
     arg_parse(argc, argv, file_name, print_opt);    // Parse arguments
 
-    RiscV* riscv = new RiscV(file_name, print_opt);
+    RiscV* riscv = new RiscV(file_name, print_opt); // Create RISC-V emulator with binary file and print option 
 
     riscv->run();
 

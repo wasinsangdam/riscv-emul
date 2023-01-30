@@ -1,4 +1,5 @@
 .bin
 ./obj
 main
+binary_tests.py
 
