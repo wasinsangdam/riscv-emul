@@ -20,7 +20,7 @@ class RiscV {
     bool print_flag;
     std::string file;
 
-    void print_status(uint32_t inst);          // Print PC and instruction with hex
+    void print_pc_inst(uint32_t inst);         // Print PC and instruction with hex
     std::string only_file(std::string file);   // Extract only file name witout directory
 
     bool is_success(uint32_t inst);            // Check whether the test was successful

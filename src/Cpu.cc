@@ -1,6 +1,4 @@
 #include "../inc/Cpu.h"
-#include "../inc/opcodes.h"
-#include "../inc/error.h"
 
 // ----------------- CPU ------------------ //
 Cpu::Cpu(Bus* bus, bool* print_opt) {    
@@ -17,10 +15,17 @@ Cpu::Cpu(Bus* bus, bool* print_opt) {
 
 // Fetch instruction from memory (XLEN = 32 bits)
 uint32_t Cpu::inst_fetch() {
+    if (pc % 4 != 0) 
+        inst_addr_misaligned(__LINE__);
+    
+    if ((pc < BASE_ADDR) && (pc > DRAM_SIZE + BASE_ADDR))
+        inst_access_fault(__LINE__);
+
     return cpu_bus->bus_load(pc, XLEN);
 } 
 
-int Cpu::inst_decode_exec(uint32_t inst) {
+// Decode instruction + execute instruction
+void Cpu::inst_decode_exec(uint32_t inst) {
     uint32_t opcode = get_opcode(inst);
 
     switch (opcode) {
@@ -44,7 +49,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                         case OR   : exec_OR(rd, rs1, rs2, funct7);   break;
                         case AND  : exec_AND(rd, rs1, rs2, funct7);  break;
 
-                        default : invalid_opcode("Invalid opcode\n", __LINE__);
+                        default : illegal_inst(__LINE__);
                     }
                     break;
                 }
@@ -53,7 +58,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                         case SUB : exec_SUB(rd, rs1, rs2, funct7); break;
                         case SRA : exec_SRA(rd, rs1, rs2, funct7); break;
 
-                        default : invalid_opcode("Invalid opcode\n", __LINE__); 
+                        default : illegal_inst(__LINE__); 
                     }
                     break;
                 }
@@ -68,12 +73,12 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                         case REM    : exec_REM(rd, rs1, rs2, funct7);    break;
                         case REMU   : exec_REMU(rd, rs1, rs2, funct7);   break;
 
-                        default : invalid_opcode("Invalid opcode\n", __LINE__);
+                        default : illegal_inst(__LINE__);
                     }
                     break;
                 }
                 
-                default : invalid_opcode("Invalid opcode\n", __LINE__);
+                default : illegal_inst(__LINE__);
             }
         }
 
@@ -99,7 +104,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                 case LBU : exec_LBU(rd, rs1, immd); break;
                 case LHU : exec_LHU(rd, rs1, immd); break;
                 
-                default : invalid_opcode("Invalid opcode\n", __LINE__);   break;
+                default : illegal_inst(__LINE__);   break;
             }
             break;
         }
@@ -124,30 +129,30 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                     switch (funct7) {
                         case SRLI : exec_SRLI(rd, rs1, immd, shamt5); break;
                         case SRAI : exec_SRAI(rd, rs1, immd, shamt5); break;
-                        default : invalid_opcode("Invalid opcode\n", __LINE__); break;
+                        default : illegal_inst(__LINE__); break;
                     }
                     break;
                 }
 
-                default : invalid_opcode("Invalid opcode\n", __LINE__); break;
+                default : illegal_inst(__LINE__); break;
             }
             break;
         } 
         
         case FENCE : {
-            uint32_t rd = get_rd(inst);
-            uint32_t rs1 = get_rs1(inst);
+            uint32_t rd   = get_rd(inst);
+            uint32_t rs1  = get_rs1(inst);
             uint32_t immd = get_immd_I(inst);
 
             exec_FENCE(rd, rs1, immd); break;
         }
         
         case SYSTEM : {
-            uint32_t rd = get_rd(inst);
-            uint32_t rs1 = get_rs1(inst);
+            uint32_t rd     = get_rd(inst);
+            uint32_t rs1    = get_rs1(inst);
             uint32_t funct3 = get_funct3(inst);
-            uint32_t immd = get_immd_I(inst);
-            uint32_t csr = get_csr(inst);
+            uint32_t immd   = get_immd_I(inst);
+            uint32_t csr    = get_csr(inst);
             
             switch (funct3) {
                 case CB : {
@@ -156,7 +161,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                         case EBREAK : exec_EBREAK(rd, rs1, immd); break;
                         case MRET   : exec_MRET(rd, rs1, immd);   break;
         
-                        default : invalid_opcode("Invalid opcode\n", __LINE__); break;
+                        default : illegal_inst(__LINE__); break;
                     }
                     break;
                 }
@@ -167,7 +172,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                 case CSRRSI : exec_CSRRSI(rd, rs1, csr); break;
                 case CSRRCI : exec_CSRRCI(rd, rs1, csr); break;
 
-                default : invalid_opcode("Invalid opcode\n", __LINE__); break;
+                default : illegal_inst(__LINE__); break;
             }
             break;
         }
@@ -184,7 +189,7 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                 case SH : exec_SH(immd, rs1, rs2); break;
                 case SW : exec_SW(immd, rs1, rs2); break;
 
-                default : invalid_opcode("Invalid opcode\n", __LINE__);  break;
+                default : illegal_inst(__LINE__);  break;
             }
             break;
         }
@@ -204,21 +209,21 @@ int Cpu::inst_decode_exec(uint32_t inst) {
                 case BLTU : exec_BLTU(immd, rs1, rs2); break;
                 case BGEU : exec_BGEU(immd, rs1, rs2); break;
 
-                default : invalid_opcode("Invalid opcode\n", __LINE__); break;  
+                default : illegal_inst(__LINE__); break;  
             }
             break;
         }
 
         // U-TYPE
         case LUI   :  {
-            uint32_t rd = get_rd(inst);
+            uint32_t rd   = get_rd(inst);
             uint32_t immd = get_immd_U(inst);
-            exec_LUI(rd, immd);   break;
+            exec_LUI(rd, immd);     break;
         }
         case AUIPC : {
-            uint32_t rd = get_rd(inst);
+            uint32_t rd   = get_rd(inst);
             uint32_t immd = get_immd_U(inst);
-            exec_AUIPC(rd, immd); break;
+            exec_AUIPC(rd, immd);   break;
         }
 
         // J-TYPE
@@ -226,33 +231,36 @@ int Cpu::inst_decode_exec(uint32_t inst) {
             uint32_t rd   = get_rd(inst);
             uint32_t immd = get_immd_J(inst);
 
-            exec_JAL(rd, immd); break; 
+            exec_JAL(rd, immd);     break; 
         }
 
-        default : invalid_opcode("Invalid opcode\n", __LINE__); break;
+        default : illegal_inst(__LINE__); break;
     }
 
     print_reg();
-
-    return 1;
 }
 
+// Load data in Cpu through Bus (Cpu <- Bus <- Mem)
 uint32_t Cpu::cpu_load(uint32_t addr, uint32_t size) {
     return cpu_bus->bus_load(addr, size);
 }
 
+// Store data in Mem through Bus (Cpu -> Bus -> Mem)
 void Cpu::cpu_store(uint32_t addr, uint32_t size, uint32_t data) {
     cpu_bus->bus_store(addr, size, data);
 }
 
+// Load CSR register
 uint32_t Cpu::csr_load(uint32_t csr) {
     return (uint32_t)csrs[csr];
 }
 
+// Store Csr register
 void Cpu::csr_store(uint32_t csr, uint32_t value) {
     csrs[csr] = value;
 }
 
+// Print registers
 void Cpu::print_reg() {
     if (print_flag) {
         std::cout << std::dec;
@@ -293,6 +301,7 @@ void Cpu::print_reg() {
     }
 }
 
+// Print current R-type instruction 
 void Cpu::print_R(const char* inst, uint32_t rd, uint32_t rs1, uint32_t rs2) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "REG[" << rd << "] " 
@@ -300,6 +309,7 @@ void Cpu::print_R(const char* inst, uint32_t rd, uint32_t rs1, uint32_t rs2) {
     }
 }
 
+// Print current I-type instruction
 void Cpu::print_I(const char* inst, uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "REG[" << rd << "] "
@@ -307,13 +317,15 @@ void Cpu::print_I(const char* inst, uint32_t rd, uint32_t rs1, uint32_t immd) {
     }
 }
 
+// Print current S-type instruction
 void Cpu::print_S(const char* inst, uint32_t rs1, uint32_t rs2, uint32_t immd) {
     if (print_flag) {
-        std::cout << "[" << inst << "] " << "REG[" << rs1 << "] "
-                  << "REG[" << rs2 << "] IMMD " << immd << " (0x" << std::hex << immd << ")\n";
+        std::cout << "[" << inst << "] " << "REG[" << rs2 << "] "
+                  << "REG[" << rs1 << "] IMMD " << immd << " (0x" << std::hex << immd << ")\n";
     }
 }
 
+// Print current B-type instruction
 void Cpu::print_B(const char* inst, uint32_t rs1, uint32_t rs2, uint32_t immd) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "REG[" << rs1 << "] "
@@ -321,6 +333,7 @@ void Cpu::print_B(const char* inst, uint32_t rs1, uint32_t rs2, uint32_t immd) {
     }
 }
 
+// Print current U-type instruction
 void Cpu::print_U(const char* inst, uint32_t rd, uint32_t immd) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "REG[" << rd << "] "
@@ -328,6 +341,7 @@ void Cpu::print_U(const char* inst, uint32_t rd, uint32_t immd) {
     }
 }
 
+// Print current J-type instruction
 void Cpu::print_J(const char* inst, uint32_t rd, uint32_t immd) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "REG[" << rd << "] "
@@ -335,6 +349,7 @@ void Cpu::print_J(const char* inst, uint32_t rd, uint32_t immd) {
     }
 }
 
+// Print current CSR instruction
 void Cpu::print_CSR(const char* inst, uint32_t rd, uint32_t rs1, uint32_t csr) {
     if (print_flag) {
         std::cout << "[" << inst << "] " << "rd[" << rd << "] "
@@ -342,6 +357,7 @@ void Cpu::print_CSR(const char* inst, uint32_t rd, uint32_t rs1, uint32_t csr) {
     }
 }
 
+// Print current SYS instruction
 void Cpu::print_SYS(const char* inst) {
     if (print_flag) {
         std::cout << inst << "\n";
@@ -352,92 +368,100 @@ void Cpu::print_SYS(const char* inst) {
 // R-TYPE
 // - RV32I (Integer Register-Register Operation)
 void Cpu::exec_ADD(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = (uint32_t)((int32_t)regs[rs1] + (int32_t)regs[rs2]);
 
     print_R("ADD", rd, rs1, rs2);
 }
+
 void Cpu::exec_SUB(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I2) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I2) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = (uint32_t)((int32_t)regs[rs1] - (int32_t)regs[rs2]);
 
     print_R("SUB", rd, rs1, rs2);
 }
+
 void Cpu::exec_SLL(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = regs[rs1] << (int32_t)regs[rs2];
 
     print_R("SLL", rd, rs1, rs2);
 }
+
 void Cpu::exec_SLT(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = (int32_t)((int32_t)regs[rs1] < (int32_t)regs[rs2] ? 1 : 0);
 
     print_R("SLT", rd, rs1, rs2);
 }
+
 void Cpu::exec_SLTU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = (uint32_t)regs[rs1] < (uint32_t)regs[rs2];
 
     print_R("SLTU", rd, rs1, rs2);
 
 }
+
 void Cpu::exec_XOR(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = regs[rs1] ^ regs[rs2];
 
     print_R("XOR", rd, rs1, rs2);
 }
+
 void Cpu::exec_SRL(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = regs[rs1] >> regs[rs2];
 
     print_R("SRL", rd, rs1, rs2);
 }
+
 void Cpu::exec_SRA(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I2) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I2) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = (int32_t)((int32_t)regs[rs1] >> (int32_t)regs[rs2]);
 
     print_R("SRA", rd, rs1, rs2);
 }
+
 void Cpu::exec_OR(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     if (rd != 0)
         regs[rd] = regs[rs1] | regs[rs2];
 
     print_R("OR", rd, rs1, rs2);
-
 }
+
 void Cpu::exec_AND(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32I1) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32I1) 
+        illegal_inst(__LINE__);
+    
     regs[rd] = regs[rs1] & regs[rs2];
 
     print_R("AND", rd, rs1, rs2);
@@ -445,45 +469,47 @@ void Cpu::exec_AND(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
 
 // - RV32M Standard Extension(Integer Register-Register Operation)
 void Cpu::exec_MUL(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
     regs[rd] = (int32_t)((int32_t)regs[rs1] 
                        * (int32_t)regs[rs2]);
 
     print_R("MUL", rd, rs1, rs2);
 }
+
 void Cpu::exec_MULH(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
     regs[rd] = (int32_t)(((int64_t)((int32_t)regs[rs1]) 
                         * (int64_t)((int32_t)regs[rs2])) >> 32);
 
     print_R("MULH", rd, rs1, rs2);
-    
 }
+
 void Cpu::exec_MULHSU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
     regs[rd] = (int32_t)(((int64_t )((int32_t )regs[rs1]) 
                         * (uint64_t)((uint32_t)regs[rs2])) >> 32);
     print_R("MULHSU", rd, rs1, rs2);
 }
+
 void Cpu::exec_MULHU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
     regs[rd] = (uint32_t)(((uint64_t)((uint32_t)regs[rs1]) 
                          * (uint64_t)((uint32_t)regs[rs2])) >> 32);
     
     print_R("MULHU", rd, rs1, rs2);
 }
+
 void Cpu::exec_DIV(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
     
     // Error (Divide by Zero)
     if (regs[rs2] == 0) {
@@ -500,10 +526,11 @@ void Cpu::exec_DIV(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
     
     print_R("DIV", rd, rs1, rs2);
 }
+
 void Cpu::exec_DIVU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
 
     // Error (Divide by Zero)
     if (regs[rs2] == 0) {    
@@ -514,11 +541,11 @@ void Cpu::exec_DIVU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
 
     print_R("DIVU", rd, rs1, rs2);
 }
-void Cpu::exec_REM(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
 
+void Cpu::exec_REM(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
     // Error (Divide by Zero)
     if (regs[rs2] == 0) {
         regs[rd] = regs[rs1];
@@ -535,9 +562,9 @@ void Cpu::exec_REM(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
 }
 
 void Cpu::exec_REMU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
-    if (funct7 != RV32M) {
-        // Error (invalid instruction)
-    }
+    if (funct7 != RV32M) 
+        illegal_inst(__LINE__);
+    
 
     // Error (Divide by Zero)
     if (regs[rs2] == 0) {
@@ -559,7 +586,7 @@ void Cpu::exec_JALR(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = ((int32_t)regs[rs1] + (int32_t)immd) & 0xFFFFFFFE; 
     
     if (pc % 4 != 0) {
-        // Error (Address misaligned)
+        inst_addr_misaligned(__LINE__);
     }
 
     pc = addr;
@@ -570,6 +597,13 @@ void Cpu::exec_JALR(uint32_t rd, uint32_t rs1, uint32_t immd) {
 // - Load Instruction
 void Cpu::exec_LB(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+
+    if (addr % 1 != 0) 
+        load_addr_misaligned(__LINE__);
+
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+        load_access_fault(__LINE__);
+
     regs[rd] = (int32_t)((int8_t)cpu_load(addr, 8));
 
     print_I("LB", rd, rs1, immd);
@@ -577,6 +611,13 @@ void Cpu::exec_LB(uint32_t rd, uint32_t rs1, uint32_t immd) {
 
 void Cpu::exec_LH(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+
+    if (addr % 2 != 0) 
+        load_addr_misaligned(__LINE__);
+
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+        load_access_fault(__LINE__);
+
     regs[rd] = (int32_t)((int16_t)cpu_load(addr, 16));
 
     print_I("LH", rd, rs1, immd);
@@ -584,6 +625,13 @@ void Cpu::exec_LH(uint32_t rd, uint32_t rs1, uint32_t immd) {
 
 void Cpu::exec_LW(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+
+    if (addr % 4 != 0) 
+        load_addr_misaligned(__LINE__);
+
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+        load_access_fault(__LINE__);
+
     regs[rd] = (int32_t)((int32_t)cpu_load(addr, 32));
 
     print_I("LW", rd, rs1, immd);
@@ -591,6 +639,13 @@ void Cpu::exec_LW(uint32_t rd, uint32_t rs1, uint32_t immd) {
 
 void Cpu::exec_LBU(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+
+    if (addr % 1 != 0) 
+        load_addr_misaligned(__LINE__);
+
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+        load_access_fault(__LINE__);
+
     regs[rd] = cpu_load(addr, 8);
 
     print_I("LBU", rd, rs1, immd);
@@ -598,6 +653,13 @@ void Cpu::exec_LBU(uint32_t rd, uint32_t rs1, uint32_t immd) {
 
 void Cpu::exec_LHU(uint32_t rd, uint32_t rs1, uint32_t immd) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+
+    if (addr % 2 != 0) 
+        load_addr_misaligned(__LINE__);
+
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+        load_access_fault(__LINE__);
+
     regs[rd] = cpu_load(addr, 16);
 
     print_I("LHU", rd, rs1, immd);
@@ -745,6 +807,13 @@ void Cpu::exec_CSRRCI(uint32_t rd, uint32_t rs1, uint32_t csr) {
 // - Store Instructions
 void Cpu::exec_SB(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+    
+    if (addr % 1 != 0)
+        store_addr_misaligned(__LINE__);
+
+    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+        store_access_fault(__LINE__);
+    
     cpu_store(addr, 8, regs[rs2]);
 
     print_S("SB", rs1, rs2, immd);
@@ -752,6 +821,13 @@ void Cpu::exec_SB(uint32_t immd, uint32_t rs1, uint32_t rs2) {
 
 void Cpu::exec_SH(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+    
+    if (addr % 2 != 0)
+        store_addr_misaligned(__LINE__);
+
+    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+        store_access_fault(__LINE__);
+
     cpu_store(addr, 16, regs[rs2]);
 
     print_S("SH", rs1, rs2, immd);
@@ -759,6 +835,13 @@ void Cpu::exec_SH(uint32_t immd, uint32_t rs1, uint32_t rs2) {
 
 void Cpu::exec_SW(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     uint32_t addr = regs[rs1] + (int32_t)immd;
+    
+    if (addr % 4 != 0)
+        store_addr_misaligned(__LINE__);
+
+    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+        store_access_fault(__LINE__);
+
     cpu_store(addr, 32, regs[rs2]);
 
     print_S("SW", rs1, rs2, immd);
@@ -772,9 +855,8 @@ void Cpu::exec_BEQ(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
-    }
+    if (next_pc % 4 != 0) 
+        inst_addr_misaligned(__LINE__);
 
     print_B("BEG", rs1, rs2, immd);
 }
@@ -784,9 +866,8 @@ void Cpu::exec_BNE(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
-    }
+    if (next_pc % 4 != 0) 
+        inst_addr_misaligned(__LINE__);
 
     print_B("BNE", rs1, rs2, immd);
 }
@@ -796,8 +877,8 @@ void Cpu::exec_BLT(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
+    if (next_pc % 4 != 0) {
+        inst_addr_misaligned(__LINE__);
     }
 
     print_B("BLT", rs1, rs2, immd);
@@ -808,8 +889,8 @@ void Cpu::exec_BGE(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
+    if (next_pc % 4 != 0) {
+        inst_addr_misaligned(__LINE__);
     }
 
     print_B("BGE", rs1, rs2, immd);
@@ -820,8 +901,8 @@ void Cpu::exec_BLTU(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
+    if (next_pc % 4 != 0) {
+        inst_addr_misaligned(__LINE__);
     }
 
     print_B("BLTU", rs1, rs2, immd);
@@ -832,8 +913,8 @@ void Cpu::exec_BGEU(uint32_t immd, uint32_t rs1, uint32_t rs2) {
         next_pc = (int32_t)pc + (int32_t)immd;
     }
 
-    if (pc % 4 != 0) {
-        // Error (address misaligned)
+    if (next_pc % 4 != 0) {
+        inst_addr_misaligned(__LINE__);
     }
 
     print_B("BGEU", rs1, rs2, immd);
@@ -931,7 +1012,7 @@ uint32_t Cpu::get_immd_J(uint32_t inst) {
 uint32_t Cpu::get_csr(uint32_t inst) {
     return ((inst & 0xFFF00000) >> 20);
 }
-
+;
 bool Cpu::check_reg0() {
     return regs[0] == 0;
 }

@@ -1,7 +1,7 @@
 #include "../inc/RiscV.h"
 
 RiscV::RiscV(std::string* file_name, bool* print_opt) {
-    memory = new Memory(file_name);     // Init memory with binaryfile
+    memory = new Memory(file_name);     // Init memory with binary file
     bus = new Bus(memory);              // Connect Bus to Memory
     cpu = new Cpu(bus, print_opt);      // Connect Cpu to Bus
 
@@ -18,7 +18,7 @@ RiscV::~RiscV() {
 }
 
 // Print PC and instruction with hex
-void RiscV::print_status(uint32_t inst) {
+void RiscV::print_pc_inst(uint32_t inst) {
     if (print_flag) {
         std::cout << "PC : 0x"   << std::setw(8) << std::setfill('0') << std::hex << cpu->pc << "  \t";
         std::cout << "INST : 0x" << std::setw(8) << std::setfill('0') << std::hex << inst    << "  \n";
@@ -41,31 +41,34 @@ std::string RiscV::only_file(std::string file) {
 
 // Check whether the test was successful
 bool RiscV::is_success(uint32_t inst) {
-
+    // Termination condition
+    // 0xc0001073 has riscv-test repository set the [unimp] command to RVTEST_CODE_END macro
+    if (inst == 0 || cpu->pc == 0 || inst == 0xc0001073)
+        return true;
+    else
+        return false;
 }
 
 void RiscV::run() {
 
     while (1) {
-        cpu->next_pc = cpu->pc + 4;
+        cpu->next_pc  = cpu->pc + 4;
         uint32_t inst = cpu->inst_fetch();
 
-        print_status(inst);
+        print_pc_inst(inst);
 
-        if (inst == 0 || cpu->pc == 0) {
+        cpu->inst_decode_exec(inst);
+
+        // When test exits with success
+        if (is_success(inst)) {
+            std::cout  << "[" << only_file(file) << "] "<< std::left 
+                       << std::setw(5) << " " << "\tTEST PASSED \n";
             break;
         }
 
-        if(cpu->inst_decode_exec(inst) != 1) {
-            break;
-        }
-        if (inst == 0xc0001073) {
-            std::cout  << "[" << only_file(file) << "] "<< std::left << std::setw(5) << " " << "\tTEST PASSED \n";
-            break;
-        }
-
+        // Always make sure that x0 remains at zero 
         if (!cpu->check_reg0()) {
-            exit(0);
+            hard_x0();
         }
 
         cpu->pc = cpu->next_pc;

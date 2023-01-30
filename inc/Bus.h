@@ -4,7 +4,6 @@
 #include <iostream>
 #include "Memory.h"
 
-
 // ----------------- BUS ------------------ //
 class Bus { 
     Memory* bus_mem;    // For connect to Memory    

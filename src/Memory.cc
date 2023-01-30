@@ -15,14 +15,6 @@ Memory::Memory(std::string* file_name) {
     file.read((char*)memory, DRAM_SIZE);
     file.close();
     
-    // Debug
-
-    // for(size_t i = 0; i < DRAM_SIZE; i += 4) {
-    //     std::cout << std::bitset<8>(memory[i + 3]) 
-    //               << std::bitset<8>(memory[i + 2]) 
-    //               << std::bitset<8>(memory[i + 1]) 
-    //               << std::bitset<8>(memory[i    ]) << "\n";
-    // }
 }
 uint32_t Memory::load_8(uint32_t addr) {
     return (uint32_t) memory[addr - BASE_ADDR];

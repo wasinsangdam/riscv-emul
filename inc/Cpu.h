@@ -6,6 +6,8 @@
 #include <string>
 #include <bitset>
 #include "Bus.h"
+#include "error.h"
+#include "opcodes.h"
 
 // ----------------- CPU ------------------ //
 class Cpu {
@@ -16,7 +18,7 @@ class Cpu {
 
     uint32_t csrs[4096] = {}; // For Zicsr Extension (Control and Status Register)
     
-    // Load data in Cpu through Bus (CPU <- BUS <- MEM)
+    // Load data in Cpu through Bus (Cpu <- Bus <- Mem)
     uint32_t cpu_load(uint32_t addr, uint32_t size);
 
     // Store data in Mem through Bus (CPU -> BUS -> MEM)
@@ -139,8 +141,8 @@ public:
     uint32_t pc;                          // Program Counter
     uint32_t next_pc;                     // next Program Counter
     uint32_t inst_fetch();                // Fetch instruction from memory
-    int inst_decode_exec(uint32_t inst);  // Decode the instruction + execute instruction
-                                          // if success return 1; else error
+    void inst_decode_exec(uint32_t inst); // Decode the instruction + execute instruction
+                                          
     bool check_reg0();                    // Check x0(REG[0]) is zero
 };
 // ----------------- CPU ------------------ //
