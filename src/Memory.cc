@@ -1,8 +1,4 @@
 #include "../inc/Memory.h"
-#include <fstream>
-#include <iomanip>
-#include <bitset>
-#include <string>
 
 // ----------------- MEMORY ------------------ //
 Memory::Memory(std::string* file_name) {    

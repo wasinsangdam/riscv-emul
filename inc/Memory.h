@@ -1,7 +1,9 @@
 #ifndef __MEMORY_H__
 #define __MEMORY_H__
 
+#include <fstream>
 #include <iostream>
+
 #define DRAM_SIZE 0x100000         // 1 MiB
 #define BASE_ADDR 0x80000000       // Base Address
 #define XLEN      32               // 4 B    
