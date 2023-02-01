@@ -364,7 +364,6 @@ void Cpu::print_SYS(const char* inst) {
     }
 }
 
-
 // R-TYPE
 // - RV32I (Integer Register-Register Operation)
 void Cpu::exec_ADD(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
@@ -940,9 +939,8 @@ void Cpu::exec_AUIPC(uint32_t rd, uint32_t immd) {
 // - JAL
 void Cpu::exec_JAL(uint32_t rd, uint32_t immd) {
 
-    if (rd != 0) {
+    if (rd != 0) 
         regs[rd] = next_pc;
-    }
     
     uint32_t addr = (int32_t)pc + (int32_t)immd;
 
