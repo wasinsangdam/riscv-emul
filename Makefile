@@ -26,9 +26,6 @@ OBJECTS		:= $(patsubst %.$(OBJEXT),$(OBJDIR)/%.$(OBJEXT),$(OBJS))
 DEPS		:= $(OBJECTS:.$(OBJEXT)=.$(DEPEXT))
 
 # Compile
-#$(OBJDIR):
-#	$(MKDIR) $(OBJDIR) 
-
 $(OBJDIR)/%.$(OBJEXT): $(SRCDIR)/%.$(SRCEXT)
 		$(MKDIR) $(OBJDIR)
 		$(CC) $(CXXLFAGS) -c $< -o $@
