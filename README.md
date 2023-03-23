@@ -7,7 +7,7 @@ Emulate the behavior of the RISC-V core (`RV32IM`)
 Using cross-compiled binary files from `riscv-software-src/riscv-tests`
 
 ## Output
-Print values in registers and PC during instruction execution
+Print values in registers and PC during execution of given instructions
 
 ## Usage
 ```
