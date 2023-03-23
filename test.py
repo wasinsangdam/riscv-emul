@@ -13,7 +13,7 @@ def run_test(test_dir) :
 
 if __name__ == "__main__" :
     if len(sys.argv) != 2 :
-        print("Usage : ./main <test_dir>")
+        print("Usage : ./test.py <test_dir>")
         exit(1)
     
     test_dir = sys.argv[1]

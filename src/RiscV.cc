@@ -61,8 +61,7 @@ void RiscV::run() {
 
         // When test exits with success
         if (is_success(inst)) {
-            std::cout  << "[" << only_file(file) << "] "<< std::left 
-                       << std::setw(5) << " " << "\tTEST PASSED \n";
+            std::cout  << "[" << only_file(file) << "]" << std::setw(13) << "\t" << std::left << "TEST PASSED \n";
             break;
         }
 
