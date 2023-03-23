@@ -11,12 +11,12 @@ Using cross-compiled binary files from `riscv-software-src/riscv-tests`
 $ make
 ```
 
-Just test binary file
+Just test a binary file
 ```
 $ ./main --binary=./bin/<name>.bin
 ```
 
-Test binary file with print option
+Test a binary file with print option
 ```
 $ ./main --binary=./bin/<name>.bin --print=true
 ```
