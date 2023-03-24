@@ -4,7 +4,7 @@
 Emulate the behavior of the RISC-V core (`RV32IM`)
 
 ## Input
-Using cross-compiled binary files from `riscv-software-src/riscv-tests`
+Using cross-compiled binary files from `riscv-software-src/riscv-tests` [Link](https://github.com/riscv-software-src/riscv-tests)
 
 ## Output
 Print values in registers and PC during execution of given instructions
