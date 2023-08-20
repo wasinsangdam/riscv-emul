@@ -80,22 +80,23 @@ void Cpu::inst_decode_exec(uint32_t inst) {
                 
                 default : illegal_inst(__LINE__);
             }
+            break;
         }
 
         // I-TYPE
         case JALR : {
-            uint32_t rd     = get_rd(inst);
-            uint32_t rs1    = get_rs1(inst);
-            uint32_t immd   = get_immd_I(inst);
+            uint32_t rd   = get_rd(inst);
+            uint32_t rs1  = get_rs1(inst);
+            uint32_t immd = get_immd_I(inst);
 
             exec_JALR(rd, rs1, immd); break;
         }
 
         case LOAD : {
-            uint32_t rd = get_rd(inst);
-            uint32_t rs1 = get_rs1(inst);
+            uint32_t rd     = get_rd(inst);
+            uint32_t rs1    = get_rs1(inst);
             uint32_t funct3 = get_funct3(inst);
-            uint32_t immd = get_immd_I(inst);
+            uint32_t immd   = get_immd_I(inst);
 
             switch (funct3) {
                 case LB  : exec_LB(rd, rs1, immd);  break;
@@ -471,8 +472,8 @@ void Cpu::exec_MUL(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
     if (funct7 != RV32M) 
         illegal_inst(__LINE__);
     
-    regs[rd] = (int32_t)((int32_t)regs[rs1] 
-                       * (int32_t)regs[rs2]);
+    if (rd != 0)
+        regs[rd] = (int32_t)((int32_t)regs[rs1] * (int32_t)regs[rs2]);
 
     print_R("MUL", rd, rs1, rs2);
 }
@@ -481,8 +482,8 @@ void Cpu::exec_MULH(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
     if (funct7 != RV32M) 
         illegal_inst(__LINE__);
     
-    regs[rd] = (int32_t)(((int64_t)((int32_t)regs[rs1]) 
-                        * (int64_t)((int32_t)regs[rs2])) >> 32);
+    if (rd != 0)
+        regs[rd] = (int32_t)(((int64_t)((int32_t)regs[rs1]) * (int64_t)((int32_t)regs[rs2])) >> 32);
 
     print_R("MULH", rd, rs1, rs2);
 }
@@ -491,8 +492,9 @@ void Cpu::exec_MULHSU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) 
     if (funct7 != RV32M) 
         illegal_inst(__LINE__);
     
-    regs[rd] = (int32_t)(((int64_t )((int32_t )regs[rs1]) 
-                        * (uint64_t)((uint32_t)regs[rs2])) >> 32);
+    if (rd != 0)
+        regs[rd] = (int32_t)(((int64_t )((int32_t )regs[rs1]) * (uint64_t)((uint32_t)regs[rs2])) >> 32);
+    
     print_R("MULHSU", rd, rs1, rs2);
 }
 
@@ -500,8 +502,8 @@ void Cpu::exec_MULHU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
     if (funct7 != RV32M) 
         illegal_inst(__LINE__);
     
-    regs[rd] = (uint32_t)(((uint64_t)((uint32_t)regs[rs1]) 
-                         * (uint64_t)((uint32_t)regs[rs2])) >> 32);
+    if (rd != 0)
+        regs[rd] = (uint32_t)(((uint64_t)((uint32_t)regs[rs1]) * (uint64_t)((uint32_t)regs[rs2])) >> 32);
     
     print_R("MULHU", rd, rs1, rs2);
 }
@@ -520,8 +522,9 @@ void Cpu::exec_DIV(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
         regs[rd] = regs[rs1];
         return;
     }
-    regs[rd] = (int32_t)((int32_t)regs[rs1] 
-                       / (int32_t)regs[rs2]);
+
+    if (rd != 0) 
+        regs[rd] = (int32_t)((int32_t)regs[rs1] / (int32_t)regs[rs2]);
     
     print_R("DIV", rd, rs1, rs2);
 }
@@ -536,7 +539,8 @@ void Cpu::exec_DIVU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
         regs[rd] = (uint32_t)(((uint64_t)1 << XLEN) - 1);
 		return;
     }
-    regs[rd] = regs[rs1] / regs[rs2];
+    if (rd != 0)
+        regs[rd] = regs[rs1] / regs[rs2];
 
     print_R("DIVU", rd, rs1, rs2);
 }
@@ -578,17 +582,18 @@ void Cpu::exec_REMU(uint32_t rd, uint32_t rs1, uint32_t rs2, uint32_t funct7) {
 // I-TYPE
 // - JALR
 void Cpu::exec_JALR(uint32_t rd, uint32_t rs1, uint32_t immd) {
-    if (rd != 0) {
-        regs[rd] = pc + 4;
-    }
-
-    uint32_t addr = ((int32_t)regs[rs1] + (int32_t)immd) & 0xFFFFFFFE; 
+    
+    uint32_t addr = (regs[rs1] + immd) & (int32_t)(~1); 
     
     if (pc % 4 != 0) {
         inst_addr_misaligned(__LINE__);
     }
 
-    pc = addr;
+    next_pc = addr;
+
+    if (rd != 0) {
+        regs[rd] = pc + 4;
+    }
 
     print_I("JALR", rd, rs1, immd);
 }
@@ -930,7 +935,7 @@ void Cpu::exec_LUI(uint32_t rd, uint32_t immd) {
 
 void Cpu::exec_AUIPC(uint32_t rd, uint32_t immd) {
     if (rd != 0)
-        regs[rd] = ((int32_t)pc + (int32_t)immd) - 4;
+        regs[rd] = ((int32_t)pc + (int32_t)immd);
 
     print_U("AUIPC", rd, immd);
 }
@@ -978,7 +983,7 @@ uint32_t Cpu::get_shamt5(uint32_t inst) {
 }
 
 uint32_t Cpu::get_immd_I(uint32_t inst) { 
-    return ((int32_t)inst >> 20);   // inst[31 : 20] = immd[11 : 0] 12 bits (signed extension) 
+    return (int32_t)inst >> 20;   // inst[31 : 20] = immd[11 : 0] 12 bits (signed extension) 
 }
 
 uint32_t Cpu::get_immd_S(uint32_t inst) {

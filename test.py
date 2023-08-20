@@ -8,7 +8,7 @@ def run_test(test_dir) :
     bins = [b for b in os.listdir(test_dir)]
     bins.sort()
     for b in bins :
-        os.system("./main" + " -b=" + test_dir + "/" + b)
+        os.system("./main" + " -b" + test_dir + "/" + b)
         
 
 if __name__ == "__main__" :

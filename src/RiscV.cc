@@ -49,15 +49,61 @@ bool RiscV::is_success(uint32_t inst) {
         return false;
 }
 
+// Check <fail> function address in dump file
+uint32_t RiscV::get_fail_pc(std::string file) {
+
+    FILE *fp = NULL;
+
+    std::string rv32ui = "./dump/rv32ui-p-";
+    std::string rv32um = "./dump/rv32um-p-";
+    std::string ext    = ".dump";
+
+    std::string dump_file = "";
+    
+    if (file.find("div") != std::string::npos || file.find("mul") != std::string::npos || file.find("rem") != std::string::npos)
+        dump_file.append(rv32um + file + ext);
+    else
+        dump_file.append(rv32ui + file + ext);
+
+    std::string command = "cat " + dump_file + " | grep -i \"<fail>:\" | cut -c 1-8";
+
+    const char *command_char = command.c_str();
+
+    char char_fail_pc[8];
+
+    if ((fp = popen(command_char, "r")) == NULL) {
+        return 1;
+    }
+
+    fread(char_fail_pc, sizeof(char), sizeof(char_fail_pc), fp);
+
+    pclose(fp);
+
+    uint32_t fail_pc = (uint32_t)strtol(char_fail_pc, NULL, 16);
+
+    return fail_pc;
+}
+
 void RiscV::run() {
 
+    uint32_t fail_pc = get_fail_pc(only_file(file));
+
     while (1) {
+
         cpu->next_pc  = cpu->pc + 4;
+
         uint32_t inst = cpu->inst_fetch();
 
         print_pc_inst(inst);
 
         cpu->inst_decode_exec(inst);
+
+
+        // When PC meets <fail> function address
+        if (cpu->pc == fail_pc) {
+            std::cout << "[" << only_file(file) << "] " << std::setw(13) << "\t" << std::left << "\tTEST FAILED \n";
+            break;
+        }
 
         // When test exits with success
         if (is_success(inst)) {

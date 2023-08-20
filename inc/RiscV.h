@@ -23,7 +23,8 @@ class RiscV {
     void print_pc_inst(uint32_t inst);         // Print PC and instruction with hex
     std::string only_file(std::string file);   // Extract only file name witout directory
 
-    bool is_success(uint32_t inst);            // Check whether the test was successful
+    uint32_t get_fail_pc(std::string file);    // Check <fail> function address in dump file
+    bool is_success(uint32_t inst);            // Check whether the test is PASS
 
 public:
     RiscV(std::string* file_name, bool* print_opt);

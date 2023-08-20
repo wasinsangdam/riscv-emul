@@ -6,17 +6,15 @@
 using namespace std;
 
 int main (int argc, char* argv[]) {
-    bool*   print_opt = new bool;
-    string* file_name = new string;
+    bool    print_opt = false;
+    string  file_name;
 
-    arg_parse(argc, argv, file_name, print_opt);    // Parse arguments
+    arg_parse(argc, argv, &file_name, &print_opt);    // Parse arguments
 
-    RiscV* riscv = new RiscV(file_name, print_opt); // Create RISC-V emulator with binary file and print option 
+    RiscV* riscv = new RiscV(&file_name, &print_opt); // Create RISC-V emulator with binary file and print option 
 
     riscv->run();
 
-    delete print_opt;
-    delete file_name;
     delete riscv;
 
     return 0;

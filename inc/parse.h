@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <stdexcept>
+#include <getopt.h>
 
 void arg_parse(int argc, char* argv[], std::string* file_name, bool* print_opt);
 void usage();
