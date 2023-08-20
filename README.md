@@ -16,12 +16,12 @@ $ make
 
 Just test a binary file
 ```
-$ ./main --binary=./bin/<name>.bin
+$ ./main --binary ./bin/<name>.bin
 ```
 
 Test a binary file with print option
 ```
-$ ./main --binary=./bin/<name>.bin --print=true
+$ ./main --binary ./bin/<name>.bin --print
 ```
 
 Test all binary files in `bin` folder
