@@ -4,3 +4,4 @@ main
 binary_tests.py
 *.o
 ./bin
+.vscode
