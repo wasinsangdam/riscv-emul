@@ -8,7 +8,7 @@ Memory::Memory(std::string* file_name) {
         throw std::runtime_error("Failed to open program file!\n");
     }
 
-    file.read((char*)memory, DRAM_SIZE);
+    file.read((char*)memory, RAM_SIZE);
     file.close();
     
 }

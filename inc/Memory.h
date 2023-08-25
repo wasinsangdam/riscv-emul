@@ -4,14 +4,14 @@
 #include <fstream>
 #include <iostream>
 
-#define DRAM_SIZE 0x100000         // 1 MiB
+#define RAM_SIZE  0x100000         // 1 MiB
 #define BASE_ADDR 0x80000000       // Base Address
 #define XLEN      32               // 4 B    
 
 // ----------------- MEMORY ------------------ //
 class Memory {
-    // DRAM size with 64KiB
-    uint8_t memory[DRAM_SIZE] = {};
+    // RAM size with 64KiB
+    uint8_t memory[RAM_SIZE] = {};
 
     // Load Byte(8 bits), Half-Word(16 bits), Word(32 bits)
     uint32_t load_8 (uint32_t addr);

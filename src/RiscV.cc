@@ -75,7 +75,12 @@ uint32_t RiscV::get_fail_pc(std::string file) {
         return 1;
     }
 
-    fread(char_fail_pc, sizeof(char), sizeof(char_fail_pc), fp);
+    int status = fread(char_fail_pc, sizeof(char), sizeof(char_fail_pc), fp);
+
+    if (status != sizeof(char_fail_pc)) {
+        std::cout << "Reading Error!\n";
+        exit(0);
+    }
 
     pclose(fp);
 

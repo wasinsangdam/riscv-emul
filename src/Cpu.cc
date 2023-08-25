@@ -6,7 +6,7 @@ Cpu::Cpu(Bus* bus, bool* print_opt) {
     else             print_flag = false;
 
     regs[0] = 0x0;                      // Hardwired zero register
-    regs[2] = BASE_ADDR + DRAM_SIZE;    // Stack pointer register
+    regs[2] = BASE_ADDR + RAM_SIZE;     // Stack pointer register
     pc      = BASE_ADDR;                // Current instruction address
 
     // Connect Cpu to Bus
@@ -18,7 +18,7 @@ uint32_t Cpu::inst_fetch() {
     if (pc % 4 != 0) 
         inst_addr_misaligned(__LINE__);
     
-    if ((pc < BASE_ADDR) && (pc > DRAM_SIZE + BASE_ADDR))
+    if ((pc < BASE_ADDR) && (pc > RAM_SIZE + BASE_ADDR))
         inst_access_fault(__LINE__);
 
     return cpu_bus->bus_load(pc, XLEN);
@@ -605,7 +605,7 @@ void Cpu::exec_LB(uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (addr % 1 != 0) 
         load_addr_misaligned(__LINE__);
 
-    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + RAM_SIZE))
         load_access_fault(__LINE__);
 
     regs[rd] = (int32_t)((int8_t)cpu_load(addr, 8));
@@ -619,7 +619,7 @@ void Cpu::exec_LH(uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (addr % 2 != 0) 
         load_addr_misaligned(__LINE__);
 
-    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + RAM_SIZE))
         load_access_fault(__LINE__);
 
     regs[rd] = (int32_t)((int16_t)cpu_load(addr, 16));
@@ -633,7 +633,7 @@ void Cpu::exec_LW(uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (addr % 4 != 0) 
         load_addr_misaligned(__LINE__);
 
-    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + RAM_SIZE))
         load_access_fault(__LINE__);
 
     regs[rd] = (int32_t)((int32_t)cpu_load(addr, 32));
@@ -647,7 +647,7 @@ void Cpu::exec_LBU(uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (addr % 1 != 0) 
         load_addr_misaligned(__LINE__);
 
-    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + RAM_SIZE))
         load_access_fault(__LINE__);
 
     regs[rd] = cpu_load(addr, 8);
@@ -661,7 +661,7 @@ void Cpu::exec_LHU(uint32_t rd, uint32_t rs1, uint32_t immd) {
     if (addr % 2 != 0) 
         load_addr_misaligned(__LINE__);
 
-    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + DRAM_SIZE))
+    if ((addr < BASE_ADDR) && (addr > BASE_ADDR + RAM_SIZE))
         load_access_fault(__LINE__);
 
     regs[rd] = cpu_load(addr, 16);
@@ -815,7 +815,7 @@ void Cpu::exec_SB(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     if (addr % 1 != 0)
         store_addr_misaligned(__LINE__);
 
-    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+    if (addr < BASE_ADDR && addr > BASE_ADDR + RAM_SIZE)
         store_access_fault(__LINE__);
     
     cpu_store(addr, 8, regs[rs2]);
@@ -829,7 +829,7 @@ void Cpu::exec_SH(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     if (addr % 2 != 0)
         store_addr_misaligned(__LINE__);
 
-    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+    if (addr < BASE_ADDR && addr > BASE_ADDR + RAM_SIZE)
         store_access_fault(__LINE__);
 
     cpu_store(addr, 16, regs[rs2]);
@@ -843,7 +843,7 @@ void Cpu::exec_SW(uint32_t immd, uint32_t rs1, uint32_t rs2) {
     if (addr % 4 != 0)
         store_addr_misaligned(__LINE__);
 
-    if (addr < BASE_ADDR && addr > BASE_ADDR + DRAM_SIZE)
+    if (addr < BASE_ADDR && addr > BASE_ADDR + RAM_SIZE)
         store_access_fault(__LINE__);
 
     cpu_store(addr, 32, regs[rs2]);
